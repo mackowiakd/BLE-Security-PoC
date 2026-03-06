@@ -33,6 +33,8 @@ Before launching the attack, the script utilizes `btmon` to hook into the **Blue
 
 > **Testing Environment Note:** The `run_audit.sh` wrapper relies on `btmon` to capture raw HCI traffic from the BlueZ stack. Execution of this specific kernel-level hooking requires a native Linux host or a dedicated USB Bluetooth adapter passed through to a Virtual Machine. Default WSL2 environments or VMs utilizing built-in PCIe combo-cards may not support hardware-level Bluetooth bridging.
 
+## Troubleshooting / Known Issues
+Note: Running this on a MacBook with Ubuntu may result in hci_uart baudrate errors. A custom kernel module patch (e.g., from macbook12-bluetooth-driver) is required to bypass ACPI and UART limitations.
 ## 🚀 How to run the PoC
 
 **1. Prepare the Target (ESP32-C3):**
@@ -44,3 +46,4 @@ To run the full audit with kernel-level traffic capture, use the Bash wrapper:
 cd attacker_script
 chmod +x run_audit.sh
 ./run_audit.sh
+
