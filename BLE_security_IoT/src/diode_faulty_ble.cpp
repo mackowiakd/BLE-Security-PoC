@@ -3,7 +3,7 @@
 #include <Adafruit_NeoPixel.h>
 
 // --- HARDWARE CONFIGURATION ---
-#define LED_PIN     2      // GPIO pin for NeoPixel (D0 on XIAO)
+#define LED_PIN     3      // GPIO pin for NeoPixel (D1 on XIAO)
 #define LED_COUNT   1      // Number of LEDs
 #define BRIGHTNESS  100     // LED Brightness (0-255)
 
