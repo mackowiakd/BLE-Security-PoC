@@ -3,6 +3,23 @@
 # BLE Security Audit Framework - HCI Traffic Interceptor
 # ==============================================================================
 
+# --- DYNAMIC PATH RESOLUTION (DevOps Standard) ---
+# Skrypt sam namierza swój własny folder na dysku, unikając hardcodowania ścieżek
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PYTHON_SCRIPT="$SCRIPT_DIR/ble_hacking/ble_hacking.py"
+
+# --- VENV AUTODETECTION ---
+# Szukamy środowiska najpierw w głównym katalogu projektu, potem w obecnym, a jak nie ma to bierzemy systemowego Pythona
+if [ -f "$PROJECT_ROOT/venv/bin/python3" ]; then
+    PYTHON_CMD="$PROJECT_ROOT/venv/bin/python3"
+elif [ -f "$SCRIPT_DIR/venv/bin/python3" ]; then
+    PYTHON_CMD="$SCRIPT_DIR/venv/bin/python3"
+else
+    PYTHON_CMD="python3"
+fi
+# -------------------------------------------------
+
 CAPTURE_FILE="hci_capture_$(date +%Y%m%d_%H%M%S).snoop"
 
 echo "==================================================="
@@ -11,7 +28,6 @@ echo "==================================================="
 
 echo "[*] Initializing Kernel Driver Interaction..."
 
-# Resetowanie interfejsu
 sudo hciconfig hci0 down
 sleep 1
 sudo hciconfig hci0 up
@@ -30,8 +46,11 @@ BTMON_PID=$!
 sleep 2
 
 echo "[*] Launching Python Black-Box Scanner..."
-# POPRAWKA 1: Precyzyjna ścieżka do pliku Pythona (zgodnie z układem Twojego repozytorium)
-if python3 attacker_script/ble_hacking/ble_hacking.py; then
+echo "    -> Using Python interpreter: $PYTHON_CMD"
+echo "    -> Executing payload: $PYTHON_SCRIPT"
+
+# Dynamiczne wywołanie payloadu
+if sudo "$PYTHON_CMD" "$PYTHON_SCRIPT"; then
     echo "[+] Python payload executed successfully."
 else
     echo "[-] Python script encountered an error."
@@ -45,7 +64,6 @@ sudo kill -INT $BTMON_PID
 sleep 1
 
 echo "[*] Analyzing Kernel logs (dmesg) for driver-level anomalies..."
-# POPRAWKA 2: Dodane 'sudo' przed dmesg
 sudo dmesg | tail -n 50 | grep -i -E "bluetooth|hci|ble" | grep -v -i "failed to write update baudrate" | grep -v -i "Apple ACPI bug"
 
 echo "==================================================="

@@ -22,8 +22,8 @@ class BLEVulnerabilityScanner:
         
         # STEP 1: Device Discovery (Finding the target)
         self.target_device = await BleakScanner.find_device_by_filter(
-            lambda d, ad: d.name and d.name == self.target_name,
-            timeout=10.0
+            lambda d, ad: self.target_name in (d.name, ad.local_name if ad else ""),
+            timeout=15.0
         )
 
         if not self.target_device:
