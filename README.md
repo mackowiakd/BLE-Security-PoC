@@ -10,7 +10,7 @@ The project highlights an **"Insecure by Design"** flaw where a device is mechan
 
 ## 🛠️ Hardware Setup
 * **Microcontroller:** XIAO ESP32-C3
-* **Actuator:** Adafruit NeoPixel RGB LED (Pin 2)
+* **Actuator:** Adafruit NeoPixel RGB LED (Pin D1)
 
 ## 🚨 The Vulnerabilities
 
