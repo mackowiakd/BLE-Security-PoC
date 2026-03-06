@@ -33,7 +33,7 @@ sleep 2
 
 echo "[*] Launching Python Black-Box Scanner..."
 # Ważne: Sprawdź, czy ścieżka do skryptu jest poprawna!
-if python3 ble_hacking.py; then
+if venv/bin/python3 ble_hacking.py; then
     echo "[+] Python payload executed successfully."
 else
     echo "[-] Python script encountered an error."
