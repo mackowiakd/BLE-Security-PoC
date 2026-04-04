@@ -29,15 +29,17 @@ echo "==================================================="
 
 echo "[*] Initializing Kernel Driver Interaction..."
 
-sudo hciconfig hci0 down
-sleep 2
-sudo hciconfig hci0 up
+# sudo hciconfig hci0 down
+# sleep 2
+# sudo hciconfig hci0 up
 
-echo "[*] Waiting for Bluetooth daemon to wake up..."
-sleep 3 # KLUCZOWE: Dajemy Linuksowi 3 sekundy na ogarnięcie, że karta znów działa!
+# echo "[*] Waiting for Bluetooth daemon to wake up..."
+# sleep 3 # KLUCZOWE: Dajemy Linuksowi 3 sekundy na ogarnięcie, że karta znów działa!
 
 # --- BLUEZ CACHE SANITIZATION ---
 echo "[*] Sanitizing BlueZ cache for target ($TARGET_MAC)..."
+# Dodajmy profilaktyczny disconnect na wypadek zawieszonej sesji!
+sudo bluetoothctl -- disconnect $TARGET_MAC > /dev/null 2>&1 || true
 sudo bluetoothctl -- remove $TARGET_MAC > /dev/null 2>&1 || true
 sleep 1
 # ------------------------------------------
