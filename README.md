@@ -22,7 +22,7 @@ The firmware's write callback (`src/diode_faulty_ble.cpp`) contains a classic bu
 
 ## 🐍 The Exploit (Python Auto-Auditor)
 The `ble_hacking.py` script acts as an automated Black-Box testing tool. It uses the `bleak` library to:
-1. Scan the environment for the vulnerable device using advanced BlueZ filtering (`ad.local_name` fallback).
+1. Scan the environment for the vulnerable device using **direct MAC address targeting**. This guarantees discovery even if the host's Bluetooth adapter truncates packet names.
 2. Establish a connection without pairing.
 3. Perform GATT Discovery to map services and find open "write" characteristics.
 4. Inject an unauthorized, oversized hexadecimal payload to trigger the Buffer Overflow and force a state change.
@@ -34,11 +34,13 @@ To elevate the testing process, I developed a **Bash wrapper script** (`run_audi
 * **DevOps Best Practices:** The script implements **dynamic path resolution** and automatically detects or falls back to isolated **Virtual Environments (venv)**. This ensures robust, cross-platform execution without hardcoded paths, managing Python dependencies effectively.
 * **Kernel-Level Hooking:** Before launching the attack, the script utilizes `btmon` to hook into the **BlueZ Bluetooth stack within the Linux Kernel**. It captures raw HCI (Host Controller Interface) traffic flowing between the OS platform components and the hardware Bluetooth driver.
 * **Automated Log Analysis:** Post-execution, the framework automatically dumps and filters the Kernel Ring Buffer (`dmesg`) to identify driver-level anomalies during the attack.
+  
 
 ## 🛠️ Hardware & Kernel Troubleshooting
 During testing on a MacBook host running native Ubuntu, several hardware-specific challenges were mitigated:
 * **Broadcom UART & ACPI Limitations:** Initial interaction with the `hci0` interface required patching the `macbook12-bluetooth-driver` to bypass ACPI baudrate errors.
-* **BlueZ Advertising Packet Parsing:** The Broadcom chip periodically threw `unknown advertising packet type: 0x10 / 0x14` errors in `dmesg`. This required modifying the Python scanner to rely on both `d.name` and the raw advertisement packet (`ad.local_name`), as the Linux BlueZ stack handles Apple's hardware packet forwarding differently than Windows.
+* * **BlueZ Packet Truncation & MAC Targeting:** The Broadcom chip on the host periodically threw `unknown advertising packet type: 0x10 / 0x14` errors in `dmesg`. This hardware flaw effectively stripped the device name from the packets. To ensure 100% reliability across all host adapters, the Python scanner was upgraded to target the raw physical MAC address directly, bypassing the name-parsing issue entirely.
+* **BlueZ Aggressive Caching & Race Conditions:** Repeated test connections caused the Linux Bluetooth daemon to cache broken states, leading to `asyncio.TimeoutError` exceptions. The `run_audit.sh` wrapper was enhanced to automatically sanitize the BlueZ cache (`bluetoothctl remove`) and allocate proper wake-up delays for the `hci0` interface before launching the exploit, ensuring an idempotent execution environment.
 
 ## 🚀 How to run the PoC
 
