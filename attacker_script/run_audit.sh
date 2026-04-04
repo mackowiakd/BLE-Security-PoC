@@ -30,13 +30,15 @@ echo "==================================================="
 echo "[*] Initializing Kernel Driver Interaction..."
 
 sudo hciconfig hci0 down
-sleep 4
+sleep 2
 sudo hciconfig hci0 up
 
-# --- NOWY BLOK: CZYSZCZENIE CACHE BLUEZ ---
+echo "[*] Waiting for Bluetooth daemon to wake up..."
+sleep 3 # KLUCZOWE: Dajemy Linuksowi 3 sekundy na ogarnięcie, że karta znów działa!
+
+# --- BLUEZ CACHE SANITIZATION ---
 echo "[*] Sanitizing BlueZ cache for target ($TARGET_MAC)..."
-# Usunięcie urządzenia z pamięci BlueZ zapobiega błędom InProgress i Timeout
-sudo bluetoothctl remove $TARGET_MAC > /dev/null 2>&1 || true
+sudo bluetoothctl -- remove $TARGET_MAC > /dev/null 2>&1 || true
 sleep 1
 # ------------------------------------------
 
