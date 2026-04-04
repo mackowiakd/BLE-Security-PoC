@@ -2,7 +2,8 @@
 # ==============================================================================
 # BLE Security Audit Framework - HCI Traffic Interceptor
 # ==============================================================================
-
+#  MAC adr of  XIAO ESP32-C3 to clean up if connected many times
+TARGET_MAC="98:3D:AE:AC:4D:B2"
 # --- DYNAMIC PATH RESOLUTION (DevOps Standard) ---
 # Skrypt sam namierza swój własny folder na dysku, unikając hardcodowania ścieżek
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
@@ -29,8 +30,15 @@ echo "==================================================="
 echo "[*] Initializing Kernel Driver Interaction..."
 
 sudo hciconfig hci0 down
-sleep 1
+sleep 4
 sudo hciconfig hci0 up
+
+# --- NOWY BLOK: CZYSZCZENIE CACHE BLUEZ ---
+echo "[*] Sanitizing BlueZ cache for target ($TARGET_MAC)..."
+# Usunięcie urządzenia z pamięci BlueZ zapobiega błędom InProgress i Timeout
+sudo bluetoothctl remove $TARGET_MAC > /dev/null 2>&1 || true
+sleep 1
+# ------------------------------------------
 
 if hciconfig hci0 | grep -q "UP RUNNING"; then
     echo "[+] HCI0 interface driver is UP and RUNNING."
@@ -50,7 +58,7 @@ echo "    -> Using Python interpreter: $PYTHON_CMD"
 echo "    -> Executing payload: $PYTHON_SCRIPT"
 
 # Dynamiczne wywołanie payloadu
-if sudo "$PYTHON_CMD" "$PYTHON_SCRIPT"; then
+if "$PYTHON_CMD" "$PYTHON_SCRIPT"; then
     echo "[+] Python payload executed successfully."
 else
     echo "[-] Python script encountered an error."
