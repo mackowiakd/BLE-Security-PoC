@@ -3,6 +3,7 @@
 This repository contains a Proof of Concept (PoC) demonstrating a common security misconfiguration and a critical memory corruption vulnerability in Bluetooth Low Energy (BLE) IoT devices. 
 ## 🎬 Video Demonstration
 Here is a short demonstration of the automated exploit in action, resulting in unauthorized control over the NeoPixel LED:
+
 ![Demo giff XIAO ESP32-C3](https://github.com/user-attachments/assets/bf4e451f-9cf1-4711-93be-7f12958f55d2)
 
 
