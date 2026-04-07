@@ -68,3 +68,18 @@ The script will generate an `.snoop` file containing the raw HCI dump.
 <img width="1920" height="1080" alt="Zrzut ekranu 2026-03-06 131958" src="https://github.com/user-attachments/assets/25757fba-c5ab-4131-9cfd-ada2ffc8b925" />
 
 [Wireshark Buffer Overflow Proof of Concept]
+
+## 📱 Manual Reconnaissance (nRF Connect)
+Before automating the attack, the vulnerability was manually verified using the industry-standard **nRF Connect for Mobile** app to simulate a realistic black-box auditing process.
+
+**1. GATT Server Enumeration:**
+Upon connecting to the `XIAO_Vulnerable_LED` target, GATT discovery revealed the custom service. As seen below, the characteristic `87654321-...` exposes `Read, Write, Write Without Response` properties. Crucially, there are no encryption or authentication requirements (missing padlock icon), confirming the Broken Access Control flaw at the metadata level.
+
+![GATT Enumeration](![b6f82526-e138-4cd9-9ce3-b98488972287](https://github.com/user-attachments/assets/bcaf584f-c8f7-4002-907d-7a7bf88cc2a6))
+
+
+**2. Unauthenticated Payload Injection:**
+To prove the vulnerability, a raw byte array (`F5 DE 0C`) was injected directly into the exposed characteristic. The application log confirms a successful write operation without triggering the Bluetooth Security Manager Protocol (SMP) pairing process. This unauthorized injection immediately altered the physical state of the device (changing the NeoPixel LED color).
+
+
+![Payload Injection Log](![d72a946a-debf-42e3-89ee-41b424b400fe](https://github.com/user-attachments/assets/fd7a5342-df6a-4ddb-a8ea-f21a74f54aab))
