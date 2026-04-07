@@ -75,11 +75,11 @@ Before automating the attack, the vulnerability was manually verified using the 
 **1. GATT Server Enumeration:**
 Upon connecting to the `XIAO_Vulnerable_LED` target, GATT discovery revealed the custom service. As seen below, the characteristic `87654321-...` exposes `Read, Write, Write Without Response` properties. Crucially, there are no encryption or authentication requirements (missing padlock icon), confirming the Broken Access Control flaw at the metadata level.
 
-![GATT Enumeration](!(https://github.com/user-attachments/assets/bcaf584f-c8f7-4002-907d-7a7bf88cc2a6))
+![GATT Enumeration](https://github.com/user-attachments/assets/bcaf584f-c8f7-4002-907d-7a7bf88cc2a6)
 
 
 **2. Unauthenticated Payload Injection:**
 To prove the vulnerability, a raw byte array (`F5 DE 0C`) was injected directly into the exposed characteristic. The application log confirms a successful write operation without triggering the Bluetooth Security Manager Protocol (SMP) pairing process. This unauthorized injection immediately altered the physical state of the device (changing the NeoPixel LED color).
 
 
-![Payload Injection Log](![d72a946a-debf-42e3-89ee-41b424b400fe](https://github.com/user-attachments/assets/fd7a5342-df6a-4ddb-a8ea-f21a74f54aab))
+![Payload Injection Log](https://github.com/user-attachments/assets/fd7a5342-df6a-4ddb-a8ea-f21a74f54aab)
