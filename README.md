@@ -1,13 +1,13 @@
 # BLE Security Misconfiguration & Memory Corruption: Proof of Concept (PoC)
 
-This repository contains a Proof of Concept (PoC) demonstrating a common security misconfiguration and a critical memory corruption vulnerability in Bluetooth Low Energy (BLE) IoT devices. 
+This repository contains a Proof of Concept (PoC) demonstrating a critical security misconfiguration in Bluetooth Low Energy (BLE) IoT devices.
+The project highlights an **"Insecure by Design"** flaw (Broken Access Control) where a device is mechanically and software-wise fully functional, but completely lacks proper authorization and encryption on the communication layer.
+
 ## 🎬 Video Demonstration
 Here is a short demonstration of the automated exploit in action, resulting in unauthorized control over the NeoPixel LED:
 
 ![Demo giff XIAO ESP32-C3](https://github.com/user-attachments/assets/bf4e451f-9cf1-4711-93be-7f12958f55d2)
 
-
-The project highlights an **"Insecure by Design"** flaw where a device is mechanically and software-wise fully functional, but lacks proper authorization on the communication layer, combined with unsafe memory handling.
 
 ## 📁 Repository Structure
 * `/BLE_security_IoT` - PlatformIO project containing the C++ code for the vulnerable BLE server (target).
